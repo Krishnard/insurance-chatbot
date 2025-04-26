@@ -2,13 +2,17 @@ import streamlit as st
 from llama_index import VectorStoreIndex, SimpleDirectoryReader
 from llama_index.llms import OpenAI
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Streamlit UI setup
 st.set_page_config(page_title="Insurance Chatbot", layout="wide")
 st.title("🛡️ AI-Powered Insurance Policy Chatbot")
 
-# API key input
-openai_api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
+# Get OpenAI API Key from environment variables
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 if openai_api_key:
     os.environ["OPENAI_API_KEY"] = openai_api_key
@@ -37,4 +41,4 @@ if openai_api_key:
     for speaker, msg in st.session_state.chat_history:
         st.markdown(f"**{speaker}:** {msg}")
 else:
-    st.warning("Please enter your OpenAI API Key in the sidebar.")
+    st.warning("API Key is missing. Please check your .env file.")
