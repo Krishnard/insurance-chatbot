@@ -6,3 +6,4 @@ tiktoken
 PyMuPDF
 sentence-transformers
 python-dotenv
+langchain-community
