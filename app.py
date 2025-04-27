@@ -1,44 +1,36 @@
 import streamlit as st
-from llama_index import VectorStoreIndex, SimpleDirectoryReader
-from llama_index.llms import OpenAI
-import os
-from dotenv import load_dotenv
+from chatbot import load_pdf, create_vectorstore, create_qa_chain
 
-# Load environment variables from .env file
-load_dotenv()
+st.set_page_config(page_title="Insurance Chatbot 💬", page_icon="🤖")
+st.title("AI-Powered Insurance Policy Chatbot 🤖")
+st.write("Ask me anything about our insurance policies!")
 
-# Streamlit UI setup
-st.set_page_config(page_title="Insurance Chatbot", layout="wide")
-st.title("🛡️ AI-Powered Insurance Policy Chatbot")
+# Load data and model
+with st.spinner("Loading knowledge base..."):
+    raw_text = load_pdf("data/insurance_policies.pdf")
+    vectorstore = create_vectorstore(raw_text)
+    qa_chain = create_qa_chain(vectorstore)
 
-# Get OpenAI API Key from environment variables
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# Conversation
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-if openai_api_key:
-    os.environ["OPENAI_API_KEY"] = openai_api_key
-    llm = OpenAI(model="gpt-3.5-turbo", temperature=0.3)
+# Show conversation history
+for msg in st.session_state.messages:
+    if msg["role"] == "user":
+        st.chat_message("user").markdown(msg["content"])
+    else:
+        st.chat_message("assistant").markdown(msg["content"])
 
-    # Load documents
-    with st.spinner("Indexing insurance policy document..."):
-        documents = SimpleDirectoryReader("data").load_data()
-        index = VectorStoreIndex.from_documents(documents)
-        query_engine = index.as_query_engine(llm=llm)
+# User input
+prompt = st.chat_input("Type your question here...")
 
-    st.subheader("Ask your insurance-related questions below 👇")
-
-    # Initialize session state for chat
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-
-    user_input = st.text_input("Your question:", placeholder="e.g., What does life insurance cover?")
-
-    if user_input:
-        response = query_engine.query(user_input)
-        st.session_state.chat_history.append(("You", user_input))
-        st.session_state.chat_history.append(("Bot", str(response)))
-
-    # Display chat history
-    for speaker, msg in st.session_state.chat_history:
-        st.markdown(f"**{speaker}:** {msg}")
-else:
-    st.warning("API Key is missing. Please check your .env file.")
+if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    with st.spinner("Thinking..."):
+        result = qa_chain({"query": prompt})
+        response = result["result"]
+    
+    st.session_state.messages.append({"role": "assistant", "content": response})
+    st.chat_message("assistant").markdown(response)
